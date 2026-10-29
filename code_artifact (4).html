@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五年級數學：尋找三角形的對應高</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'PingFang HK', 'Microsoft JhengHei', sans-serif;
+            background-color: #f0f8ff;
+            color: #333;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .tug-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            position: relative;
+        }
+        .team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            width: 120px;
+            z-index: 2;
+        }
+        .team-blue { color: #3498db; }
+        .team-red { color: #e74c3c; }
+        .rope-area {
+            flex-grow: 1;
+            height: 8px;
+            background: #8e44ad;
+            position: relative;
+            margin: 0 20px;
+            z-index: 1;
+            border-radius: 4px;
+        }
+        .center-mark {
+            position: absolute;
+            left: 50%;
+            top: -10px;
+            bottom: -10px;
+            width: 2px;
+            background: #7f8c8d;
+            border-left: 1px dashed #fff;
+        }
+        .flag {
+            width: 24px;
+            height: 30px;
+            background: #f1c40f;
+            position: absolute;
+            top: -11px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 4px;
+            border: 2px solid #333;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .instruction {
+            background-color: #ffeaa7;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        .battle-canvas {
+            background-color: #fafafa;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            touch-action: none; /* 避免在手機上點擊時畫面滾動 */
+        }
+        .player-side .battle-canvas { cursor: default; } /* 會由 JS 動態改變 */
+        
+        /* 新增：雙方對戰區域樣式 */
+        .battle-arena {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            margin-top: 20px;
+            gap: 15px;
+        }
+        .side {
+            flex: 1;
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .player-side {
+            background-color: rgba(52, 152, 219, 0.05);
+            border: 2px solid #3498db;
+        }
+        .computer-side {
+            background-color: rgba(231, 76, 60, 0.05);
+            border: 2px solid #e74c3c;
+        }
+        .side h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .player-side h3 { color: #2980b9; }
+        .computer-side h3 { color: #c0392b; }
+        
+        .options-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .comp-status-text {
+            font-weight: bold;
+            color: #e74c3c;
+            font-size: 1.1rem;
+        }
+
+        .feedback {
+            margin-top: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            min-height: 35px;
+        }
+        .correct { color: #2ecc71; }
+        .wrong { color: #e74c3c; }
+        
+        #end-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+        }
+        .medal {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📐 尋找三角形的對應高</h1>
+    
+    <div id="game-area">
+        <div id="question-counter" style="text-align: right; color: #7f8c8d; font-weight: bold; margin-bottom: 5px;">題號: 1 / 10</div>
+        
+        <div class="tug-container">
+            <div class="team team-blue">
+                <div>👦 學生 (你)</div>
+                <div id="blue-score" style="font-size: 1.5rem;">0</div>
+            </div>
+            <div class="rope-area">
+                <div class="center-mark"></div>
+                <div class="flag" id="rope-flag"></div>
+            </div>
+            <div class="team team-red">
+                <div>🤖 電腦</div>
+                <div id="red-score" style="font-size: 1.5rem;">0</div>
+            </div>
+        </div>
+        
+        <div class="instruction">
+            <strong>【拔河搶答】</strong> 藍色粗實線是「<strong>底</strong>」，請直接在你的作答區<strong>點擊正確「高」的虛線</strong>！
+        </div>
+        
+        <div class="battle-arena">
+            <div class="side player-side">
+                <h3>👦 你的作答區 (點選虛線)</h3>
+                <canvas id="playerCanvas" class="battle-canvas" width="600" height="400"></canvas>
+            </div>
+            
+            <div class="side computer-side">
+                <h3>🤖 電腦狀態</h3>
+                <canvas id="computerCanvas" class="battle-canvas" width="600" height="400"></canvas>
+                <div style="width: 100%; margin-top: 15px;">
+                    <div class="comp-status-text" id="comp-text">等待題目...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="feedback" id="feedback-text"></div>
+    </div>
+
+    <div id="end-screen">
+        <div class="medal">🏆</div>
+        <h2>恭喜你完成所有挑戰！</h2>
+        <p id="final-score" style="font-size: 1.5rem; margin: 20px 0;">你的總得分是：</p>
+        <button class="btn-next" style="display: block;" onclick="location.reload()">再玩一次</button>
+    </div>
+</div>
+
+<script>
+    // 遊戲資料 (10題)
+    const questionsData = [
+        // Q1: 銳角三角形 (底在下)
+        { points: [{x:150, y:320}, {x:450, y:320}, {x:250, y:80}], base: [0, 1], top: 2 },
+        // Q2: 直角三角形 (底為底股)
+        { points: [{x:200, y:320}, {x:450, y:320}, {x:200, y:120}], base: [0, 1], top: 2 },
+        // Q3: 鈍角三角形 (底在下，高在左外側)
+        { points: [{x:300, y:320}, {x:500, y:320}, {x:150, y:150}], base: [0, 1], top: 2 },
+        // Q4: 鈍角三角形 (底在下，高在右外側)
+        { points: [{x:100, y:320}, {x:300, y:320}, {x:450, y:150}], base: [0, 1], top: 2 },
+        // Q5: 銳角三角形 (底在右斜邊)
+        { points: [{x:100, y:200}, {x:300, y:350}, {x:450, y:100}], base: [1, 2], top: 0 },
+        // Q6: 直角三角形 (底為斜邊)
+        { points: [{x:150, y:150}, {x:150, y:350}, {x:350, y:350}], base: [0, 2], top: 1 },
+        // Q7: 鈍角三角形 (底在上水平)
+        { points: [{x:150, y:150}, {x:350, y:150}, {x:450, y:350}], base: [0, 1], top: 2 },
+        // Q8: 銳角三角形 (底在左斜邊)
+        { points: [{x:150, y:350}, {x:300, y:100}, {x:450, y:350}], base: [0, 1], top: 2 },
+        // Q9: 鈍角三角形 (底為右斜邊，高在上)
+        { points: [{x:150, y:350}, {x:450, y:250}, {x:500, y:350}], base: [0, 1], top: 2 },
+        // Q10: 直角三角形 (旋轉，底為直立邊)
+        { points: [{x:250, y:100}, {x:450, y:100}, {x:250, y:350}], base: [0, 2], top: 1 }
+    ];
+
+    let currentQuestionIndex = 0;
+    let currentOptions = [];
+    let correctIndex = -1;
+    let roundActive = false;
+    
+    // Tug of War Stats
+    let ropePos = 0; // -5 (Blue wins) to +5 (Red wins)
+    let blueWins = 0;
+    let redWins = 0;
+    let computerTimer = null;
+
+    const playerCanvas = document.getElementById('playerCanvas');
+    const ctxPlayer = playerCanvas.getContext('2d');
+    const computerCanvas = document.getElementById('computerCanvas');
+    const ctxComputer = computerCanvas.getContext('2d');
+    const feedbackText = document.getElementById('feedback-text');
+
+    // 數學輔助函數：求點到直線的垂足
+    function getPerpendicularFoot(px, py, ax, ay, bx, by) {
+        const dx = bx - ax;
+        const dy = by - ay;
+        const mag2 = dx * dx + dy * dy;
+        if (mag2 === 0) return { x: ax, y: ay, u: 0 };
+        const u = ((px - ax) * dx + (py - ay) * dy) / mag2;
+        return {
+            x: ax + u * dx,
+            y: ay + u * dy,
+            u: u // u用來判斷垂足是否在線段內 (0 <= u <= 1)
+        };
+    }
+
+    // 取得滑鼠在 Canvas 內的正確縮放座標
+    function getMousePos(canvas, evt) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        let clientX = evt.clientX;
+        let clientY = evt.clientY;
+        if (evt.touches && evt.touches.length > 0) {
+            clientX = evt.touches[0].clientX;
+            clientY = evt.touches[0].clientY;
+        }
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    // 點到線段距離的平方 (計算碰撞偵測)
+    function distToSegmentSquared(p, v, w) {
+        let l2 = (v.x - w.x)*(v.x - w.x) + (v.y - w.y)*(v.y - w.y);
+        if (l2 === 0) return (p.x - v.x)*(p.x - v.x) + (p.y - v.y)*(p.y - v.y);
+        let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return (p.x - (v.x + t * (w.x - v.x)))*(p.x - (v.x + t * (w.x - v.x))) +
+               (p.y - (v.y + t * (w.y - v.y)))*(p.y - (v.y + t * (w.y - v.y)));
+    }
+
+    // 判斷點擊了哪一條線段
+    function getClickedLine(mx, my) {
+        let minDist = 400; // 點擊容忍度 (20像素的平方)
+        let clickedIdx = -1;
+        for (let i = 0; i < currentOptions.length; i++) {
+            const opt = currentOptions[i];
+            let distSq = distToSegmentSquared({x: mx, y: my}, opt.start, opt.end);
+            if (distSq < minDist) {
+                minDist = distSq;
+                clickedIdx = i;
+            }
+        }
+        return clickedIdx;
+    }
+
+    // 滑鼠與觸控事件監聽
+    playerCanvas.addEventListener('mousedown', function(e) {
+        if (!roundActive) return;
+        const pos = getMousePos(playerCanvas, e);
+        const clickedIdx = getClickedLine(pos.x, pos.y);
+        if (clickedIdx !== -1) {
+            checkAnswer(clickedIdx);
+        }
+    });
+
+    playerCanvas.addEventListener('touchstart', function(e) {
+        if (!roundActive) return;
+        e.preventDefault(); 
+        const pos = getMousePos(playerCanvas, e);
+        const clickedIdx = getClickedLine(pos.x, pos.y);
+        if (clickedIdx !== -1) {
+            checkAnswer(clickedIdx);
+        }
+    }, {passive: false});
+
+    playerCanvas.addEventListener('mousemove', function(e) {
+        if (!roundActive) {
+            playerCanvas.style.cursor = 'default';
+            return;
+        }
+        const pos = getMousePos(playerCanvas, e);
+        const hoveredIdx = getClickedLine(pos.x, pos.y);
+        if (hoveredIdx !== -1) {
+            playerCanvas.style.cursor = 'pointer';
+            drawScene(ctxPlayer, questionsData[currentQuestionIndex], false, -1, '#3498db', hoveredIdx);
+        } else {
+            playerCanvas.style.cursor = 'default';
+            drawScene(ctxPlayer, questionsData[currentQuestionIndex]);
+        }
+    });
+
+    function initGame() {
+        currentQuestionIndex = 0;
+        ropePos = 0;
+        blueWins = 0;
+        redWins = 0;
+        document.getElementById('end-screen').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        updateUI();
+        updateTugOfWar();
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        clearTimeout(computerTimer);
+        roundActive = true;
+        feedbackText.textContent = '⏱️ 搶答開始！點選你的畫面上正確的對應高！';
+        feedbackText.className = 'feedback';
+        
+        const q = questionsData[currentQuestionIndex];
+        generateOptions(q);
+        
+        // 畫雙邊畫面
+        drawScene(ctxPlayer, q);
+        drawScene(ctxComputer, q);
+
+        // 電腦隨機在 2 ~ 5 秒間作答
+        const delay = Math.floor(Math.random() * 3000) + 2000;
+        const compText = document.getElementById('comp-text');
+        
+        compText.textContent = '💻 思考計算中...';
+
+        computerTimer = setTimeout(computerAnswers, delay);
+    }
+
+    function computerAnswers() {
+        if (!roundActive) return;
+        roundActive = false;
+        
+        document.getElementById('comp-text').textContent = '❗️ 電腦已搶先作答！';
+
+        redWins++;
+        ropePos++;
+        updateTugOfWar();
+        
+        feedbackText.textContent = "💻 哎呀！電腦搶先答對了！";
+        feedbackText.className = "feedback wrong";
+        
+        // 電腦畫面標紅，玩家畫面也提示紅色
+        drawScene(ctxComputer, questionsData[currentQuestionIndex], true, correctIndex, '#e74c3c');
+        drawScene(ctxPlayer, questionsData[currentQuestionIndex], true, correctIndex, '#e74c3c');
+        
+        setTimeout(nextQuestion, 2500); 
+    }
+
+    function generateOptions(q) {
+        const pTop = q.points[q.top];
+        const pBase1 = q.points[q.base[0]];
+        const pBase2 = q.points[q.base[1]];
+
+        const foot = getPerpendicularFoot(pTop.x, pTop.y, pBase1.x, pBase1.y, pBase2.x, pBase2.y);
+        const optCorrect = { start: pTop, end: {x: foot.x, y: foot.y}, isCorrect: true, u: foot.u };
+
+        const midX = (pBase1.x + pBase2.x) / 2;
+        const midY = (pBase1.y + pBase2.y) / 2;
+        let optWrong1 = { start: pTop, end: {x: midX, y: midY}, isCorrect: false };
+        
+        let wX = pBase1.x;
+        let wY = pBase1.y;
+        if (Math.abs(wX - foot.x) < 20 && Math.abs(wY - foot.y) < 20) {
+            wX = pBase2.x; wY = pBase2.y;
+        }
+        if (Math.abs(wX - foot.x) < 20 && Math.abs(wY - foot.y) < 20) {
+            wX = pBase1.x * 0.75 + pBase2.x * 0.25;
+            wY = pBase1.y * 0.75 + pBase2.y * 0.25;
+        }
+        let optWrong2 = { start: pTop, end: {x: wX, y: wY}, isCorrect: false };
+
+        currentOptions = [optCorrect, optWrong1, optWrong2];
+        currentOptions.sort(() => Math.random() - 0.5);
+        correctIndex = currentOptions.findIndex(o => o.isCorrect);
+    }
+
+    // 加入 ctx 參數，並支援 hover 狀態顯示
+    function drawScene(ctx, q, showAnswer = false, selectedIdx = -1, winColor = '#3498db', hoverIdx = -1) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        const pts = q.points;
+        const b1 = pts[q.base[0]];
+        const b2 = pts[q.base[1]];
+
+        const correctOpt = currentOptions[correctIndex];
+        if (correctOpt.u < 0 || correctOpt.u > 1) {
+            ctx.beginPath();
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 2;
+            if (correctOpt.u < 0) {
+                ctx.moveTo(b1.x, b1.y);
+                ctx.lineTo(correctOpt.end.x, correctOpt.end.y);
+            } else {
+                ctx.moveTo(b2.x, b2.y);
+                ctx.lineTo(correctOpt.end.x, correctOpt.end.y);
+            }
+            ctx.stroke();
+        }
+
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        ctx.lineTo(pts[1].x, pts[1].y);
+        ctx.lineTo(pts[2].x, pts[2].y);
+        ctx.closePath();
+        ctx.strokeStyle = '#2c3e50';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(44, 62, 80, 0.05)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(b1.x, b1.y);
+        ctx.lineTo(b2.x, b2.y);
+        ctx.strokeStyle = '#2980b9';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        
+        const midBaseX = (b1.x + b2.x)/2;
+        const midBaseY = (b1.y + b2.y)/2;
+        ctx.font = '20px sans-serif';
+        ctx.fillStyle = '#2980b9';
+        ctx.fillText("底", midBaseX - 10, midBaseY + 30);
+
+        const labels = ['A', 'B', 'C'];
+        for (let i = 0; i < currentOptions.length; i++) {
+            const opt = currentOptions[i];
+            
+            ctx.beginPath();
+            ctx.setLineDash([8, 6]);
+            
+            if (showAnswer) {
+                if (i === correctIndex) {
+                    ctx.strokeStyle = winColor; // 依照誰答對顯示不同顏色
+                    ctx.lineWidth = 4;
+                } else if (i === selectedIdx && !opt.isCorrect) {
+                    ctx.strokeStyle = '#95a5a6'; // 答錯的選項變灰色
+                    ctx.lineWidth = 4;
+                } else {
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    ctx.lineWidth = 2;
+                }
+            } else {
+                if (i === hoverIdx) {
+                    ctx.strokeStyle = '#2980b9'; // 滑鼠懸停強調顏色
+                    ctx.lineWidth = 5;
+                } else {
+                    ctx.strokeStyle = '#7f8c8d';
+                    ctx.lineWidth = 3;
+                }
+            }
+
+            ctx.moveTo(opt.start.x, opt.start.y);
+            ctx.lineTo(opt.end.x, opt.end.y);
+            ctx.stroke();
+
+            if (showAnswer && i === correctIndex) {
+                drawRightAngle(ctx, opt.end.x, opt.end.y, b1.x, b1.y, b2.x, b2.y, opt.start.x, opt.start.y, winColor);
+            }
+
+            if (!showAnswer || i === correctIndex || i === selectedIdx) {
+                const labelX = (opt.start.x + opt.end.x) / 2;
+                const labelY = (opt.start.y + opt.end.y) / 2;
+                
+                ctx.beginPath();
+                ctx.arc(labelX + 15, labelY - 15, 14, 0, 2 * Math.PI);
+                ctx.fillStyle = (showAnswer && i === correctIndex) ? winColor : 
+                                (showAnswer && i === selectedIdx) ? '#95a5a6' : 
+                                (i === hoverIdx ? '#f39c12' : '#f1c40f');
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.font = 'bold 16px sans-serif';
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(labels[i], labelX + 15, labelY - 15);
+            }
+        }
+        ctx.setLineDash([]);
+    }
+
+    function drawRightAngle(ctx, fx, fy, bx1, by1, bx2, by2, tx, ty, color) {
+        const size = 15;
+        let vx = bx2 - bx1;
+        let vy = by2 - by1;
+        let len = Math.sqrt(vx*vx + vy*vy);
+        vx /= len; vy /= len;
+        
+        let hx = tx - fx;
+        let hy = ty - fy;
+        let hlen = Math.sqrt(hx*hx + hy*hy);
+        hx /= hlen; hy /= hlen;
+
+        ctx.beginPath();
+        ctx.moveTo(fx + vx*size, fy + vy*size);
+        ctx.lineTo(fx + vx*size + hx*size, fy + vy*size + hy*size);
+        ctx.lineTo(fx + hx*size, fy + hy*size);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    function checkAnswer(selectedIndex) {
+        if (!roundActive) return;
+        roundActive = false;
+        clearTimeout(computerTimer);
+
+        const isCorrect = (selectedIndex === correctIndex);
+        
+        if (isCorrect) {
+            document.getElementById('comp-text').textContent = '😲 電腦被打斷了！';
+            blueWins++;
+            ropePos--;
+            feedbackText.textContent = "✅ 太棒了！你搶先答對了！";
+            feedbackText.className = "feedback correct";
+            updateTugOfWar();
+            
+            // 玩家畫面顯示藍色正確線，電腦畫面灰掉
+            drawScene(ctxPlayer, questionsData[currentQuestionIndex], true, selectedIndex, '#3498db');
+            drawScene(ctxComputer, questionsData[currentQuestionIndex], true, correctIndex, '#95a5a6');
+        } else {
+            document.getElementById('comp-text').textContent = '😎 電腦得分！';
+            redWins++;
+            ropePos++;
+            feedbackText.textContent = "❌ 答錯了！分數送給電腦了。";
+            feedbackText.className = "feedback wrong";
+            updateTugOfWar();
+            
+            // 玩家畫面紅線提示，電腦畫面顯示紅線
+            drawScene(ctxPlayer, questionsData[currentQuestionIndex], true, selectedIndex, '#e74c3c');
+            drawScene(ctxComputer, questionsData[currentQuestionIndex], true, correctIndex, '#e74c3c');
+        }
+
+        setTimeout(nextQuestion, 2500);
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questionsData.length) {
+            updateUI();
+            loadQuestion();
+        } else {
+            endGame();
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('question-counter').textContent = `題號: ${currentQuestionIndex + 1} / ${questionsData.length}`;
+    }
+
+    function updateTugOfWar() {
+        document.getElementById('blue-score').textContent = blueWins;
+        document.getElementById('red-score').textContent = redWins;
+        
+        let visualPos = Math.max(-5, Math.min(5, ropePos));
+        let percentage = 50 + (visualPos * 10);
+        document.getElementById('rope-flag').style.left = percentage + '%';
+    }
+
+    function endGame() {
+        document.getElementById('game-area').style.display = 'none';
+        const endScreen = document.getElementById('end-screen');
+        endScreen.style.display = 'flex';
+        
+        let msg = "";
+        let medal = "";
+        if (blueWins > redWins) {
+            msg = `🎉 恭喜！你以 ${blueWins} : ${redWins} 戰勝了電腦！`;
+            medal = '🏆';
+        } else if (redWins > blueWins) {
+            msg = `💻 挑戰失敗！電腦以 ${redWins} : ${blueWins} 贏了。下次再努力！`;
+            medal = '💪';
+        } else {
+            msg = `🤝 平手！比數是 ${blueWins} : ${redWins}。`;
+            medal = '⚖️';
+        }
+        
+        document.getElementById('final-score').textContent = msg;
+        endScreen.querySelector('.medal').textContent = medal;
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
